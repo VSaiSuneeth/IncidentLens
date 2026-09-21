@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: checkout
+  gitops: managed
   namespace: demo-app
   labels:
     app: checkout
