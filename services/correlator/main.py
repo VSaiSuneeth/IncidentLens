@@ -38,9 +38,11 @@ try:
     config.load_incluster_config()
     k8s_core = client.CoreV1Api()
     k8s_apps = client.AppsV1Api()
+    k8s_custom = client.CustomObjectsApi()
 except Exception:
     k8s_core = None
     k8s_apps = None
+    k8s_custom = None
 
 
 def get_db():
@@ -155,7 +157,10 @@ async def query_tempo(trace_id: str) -> dict[str, Any]:
         }
 
 
-def get_kubernetes_evidence(namespace: str, service: str) -> dict:
+def get_kubernetes_evidence(
+    namespace: str,
+    service: str,
+) -> dict:
     evidence = {
         "events": [],
         "pods": [],
@@ -188,7 +193,8 @@ def get_kubernetes_evidence(namespace: str, service: str) -> dict:
                         "message": message,
                         "object": involved.name,
                         "timestamp": str(
-                            event.last_timestamp or event.event_time
+                            event.last_timestamp
+                            or event.event_time
                         ),
                     }
                 )
@@ -225,10 +231,12 @@ def get_kubernetes_evidence(namespace: str, service: str) -> dict:
                         "name": deployment.metadata.name,
                         "desired": deployment.spec.replicas,
                         "available": (
-                            deployment.status.available_replicas or 0
+                            deployment.status.available_replicas
+                            or 0
                         ),
                         "ready": (
-                            deployment.status.ready_replicas or 0
+                            deployment.status.ready_replicas
+                            or 0
                         ),
                     }
                 )
@@ -237,6 +245,58 @@ def get_kubernetes_evidence(namespace: str, service: str) -> dict:
         evidence["error"] = str(exc)
 
     return evidence
+
+
+# ================================================================
+# GitOps / Argo CD Evidence
+# ================================================================
+def get_gitops_evidence() -> dict:
+    try:
+        # Create CustomObjectsApi client
+        custom_api = client.CustomObjectsApi()
+
+        # Get Argo CD Application
+        application = custom_api.get_namespaced_custom_object(
+            group="argoproj.io",
+            version="v1alpha1",
+            namespace="argocd",
+            plural="applications",
+            name="incidentlens-demo",
+        )
+
+        status = application.get("status", {})
+        history = status.get("history", [])
+
+        evidence = {
+            "application": "incidentlens-demo",
+            "sync_status": status.get("sync", {}).get("status"),
+            "current_revision": status.get("sync", {}).get(
+                "revision"
+            ),
+            "health_status": status.get("health", {}).get(
+                "status"
+            ),
+            "history": [],
+        }
+
+        for item in history:
+            evidence["history"].append(
+                {
+                    "revision": item.get("revision"),
+                    "deployed_at": item.get("deployedAt"),
+                    "deploy_started_at": item.get(
+                        "deployStartedAt"
+                    ),
+                }
+            )
+
+        return evidence
+
+    except Exception as exc:
+        return {
+            "error": str(exc),
+            "application": "incidentlens-demo",
+        }
 
 
 def build_hypotheses(
@@ -249,6 +309,7 @@ def build_hypotheses(
     prometheus = evidence.get("prometheus", {})
     loki = evidence.get("loki", {})
     k8s_evidence = evidence.get("kubernetes", {})
+    gitops_evidence = evidence.get("gitops", {})
 
     # -------------------------------------------------------------
     # Prometheus hypothesis
@@ -296,7 +357,7 @@ def build_hypotheses(
         )
 
     # -------------------------------------------------------------
-    # NEW: Kubernetes event hypothesis
+    # Kubernetes event hypothesis
     # -------------------------------------------------------------
     if k8s_evidence.get("events"):
         hypotheses.append(
@@ -307,6 +368,25 @@ def build_hypotheses(
                     f"{len(k8s_evidence['events'])} "
                     f"event(s) associated with "
                     f"{service or 'unknown'}."
+                ),
+                "confidence": 0.50,
+            }
+        )
+
+    # -------------------------------------------------------------
+    # GitOps hypothesis
+    # -------------------------------------------------------------
+    if gitops_evidence and "error" not in gitops_evidence:
+        hypotheses.append(
+            {
+                "type": "gitops_deployment",
+                "description": (
+                    f"Argo CD application "
+                    f"'{gitops_evidence.get('application')}' "
+                    f"has sync status "
+                    f"'{gitops_evidence.get('sync_status')}' "
+                    f"and health status "
+                    f"'{gitops_evidence.get('health_status')}'."
                 ),
                 "confidence": 0.50,
             }
@@ -361,7 +441,11 @@ async def correlate_alert(payload: dict[str, Any]):
         # ---------------------------------------------------------
         prom_query = (
             f'up{{namespace="{namespace}"'
-            + (f',service="{service}"' if service else "")
+            + (
+                f',service="{service}"'
+                if service
+                else ""
+            )
             + "}"
         )
 
@@ -370,23 +454,28 @@ async def correlate_alert(payload: dict[str, Any]):
         # ---------------------------------------------------------
         loki_query = (
             f'{{namespace="{namespace}"'
-            + (f',app="{service}"' if service else "")
+            + (
+                f',app="{service}"'
+                if service
+                else ""
+            )
             + "}"
         )
 
         # ---------------------------------------------------------
-        # Collect evidence
+        # Collect Prometheus and Loki evidence
         # ---------------------------------------------------------
         evidence = {
-            "prometheus": await query_prometheus(prom_query),
-            "loki": await query_loki(loki_query),
+            "prometheus": await query_prometheus(
+                prom_query
+            ),
+            "loki": await query_loki(
+                loki_query
+            ),
         }
 
         # ---------------------------------------------------------
         # Kubernetes evidence
-        #
-        # This is stored directly inside the incident evidence
-        # object as "kubernetes_evidence".
         # ---------------------------------------------------------
         k8s_evidence = {
             "events": [],
@@ -403,14 +492,24 @@ async def correlate_alert(payload: dict[str, Any]):
         evidence["kubernetes"] = k8s_evidence
 
         # ---------------------------------------------------------
+        # GitOps / Argo CD evidence
+        # ---------------------------------------------------------
+        gitops_evidence = get_gitops_evidence()
+
+        evidence["gitops"] = gitops_evidence
+
+        # ---------------------------------------------------------
         # Tempo trace evidence
         # ---------------------------------------------------------
-        trace_id = annotations.get("trace_id") or annotations.get(
-            "traceID"
+        trace_id = (
+            annotations.get("trace_id")
+            or annotations.get("traceID")
         )
 
         if trace_id:
-            evidence["tempo"] = await query_tempo(trace_id)
+            evidence["tempo"] = await query_tempo(
+                trace_id
+            )
 
         # ---------------------------------------------------------
         # Build hypotheses
@@ -427,12 +526,15 @@ async def correlate_alert(payload: dict[str, Any]):
         conn = get_db()
 
         existing = conn.execute(
-            "SELECT id FROM incidents WHERE fingerprint = ?",
+            """
+            SELECT id
+            FROM incidents
+            WHERE fingerprint = ?
+            """,
             (fingerprint,),
         ).fetchone()
 
         if existing:
-
             conn.execute(
                 """
                 UPDATE incidents
@@ -455,7 +557,6 @@ async def correlate_alert(payload: dict[str, Any]):
             action = "updated"
 
         else:
-
             conn.execute(
                 """
                 INSERT INTO incidents (
@@ -495,14 +596,19 @@ async def correlate_alert(payload: dict[str, Any]):
 
         # ---------------------------------------------------------
         # Incident response object
-        #
-        # Explicitly expose Kubernetes evidence here as requested.
         # ---------------------------------------------------------
         results.append(
             {
                 "fingerprint": fingerprint,
                 "action": action,
+
+                # Kubernetes evidence
                 "kubernetes_evidence": k8s_evidence,
+
+                # GitOps evidence
+                "gitops_evidence": gitops_evidence,
+
+                # Generated hypotheses
                 "hypotheses": hypotheses,
             }
         )
@@ -512,6 +618,53 @@ async def correlate_alert(payload: dict[str, Any]):
         "results": results,
     }
 
+
+# ================================================================
+# Incident Retrieval Endpoints
+# ================================================================
+
+@app.get("/incidents")
+def list_incidents():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM incidents
+            ORDER BY id DESC
+            """
+        ).fetchall()
+
+    return [dict(row) for row in rows]
+
+
+@app.get("/incidents/{incident_id}")
+def get_incident(incident_id: int):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+
+        row = conn.execute(
+            """
+            SELECT *
+            FROM incidents
+            WHERE id = ?
+            """,
+            (incident_id,),
+        ).fetchone()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found",
+        )
+
+    return dict(row)
+
+
+# ================================================================
+# Alertmanager Webhook
+# ================================================================
 
 @app.post("/webhook")
 async def webhook(request: Request):
