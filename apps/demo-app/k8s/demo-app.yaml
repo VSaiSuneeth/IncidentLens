@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  namespace: demo-app
+  labels:
+    app: checkout
+    owner: payments-team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+        owner: payments-team
+    spec:
+      containers:
+        - name: checkout
+          image: incidentlens/demo-app:dev
+          imagePullPolicy: Never
+          command:
+            - uvicorn
+            - checkout.main:app
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8000"
+          ports:
+            - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout
+  namespace: demo-app
+spec:
+  selector:
+    app: checkout
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  namespace: demo-app
+  labels:
+    app: payment
+    owner: payments-team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+        owner: payments-team
+    spec:
+      containers:
+        - name: payment
+          image: incidentlens/demo-app:dev
+          imagePullPolicy: Never
+          command:
+            - uvicorn
+            - payment.main:app
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8001"
+          ports:
+            - containerPort: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment
+  namespace: demo-app
+spec:
+  selector:
+    app: payment
+  ports:
+    - port: 8001
+      targetPort: 8001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory
+  namespace: demo-app
+  labels:
+    app: inventory
+    owner: inventory-team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory
+  template:
+    metadata:
+      labels:
+        app: inventory
+        owner: inventory-team
+    spec:
+      containers:
+        - name: inventory
+          image: incidentlens/demo-app:dev
+          imagePullPolicy: Never
+          command:
+            - uvicorn
+            - inventory.main:app
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8002"
+          ports:
+            - containerPort: 8002
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory
+  namespace: demo-app
+spec:
+  selector:
+    app: inventory
+  ports:
+    - port: 8002
+      targetPort: 8002

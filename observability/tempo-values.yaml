@@ -1,0 +1,19 @@
+tempo:
+  reportingEnabled: false
+
+persistence:
+  enabled: true
+  size: 5Gi
+
+service:
+  type: ClusterIP
+
+tempoQuery:
+  enabled: true
+
+traces:
+  otlp:
+    grpc:
+      enabled: true
+    http:
+      enabled: true

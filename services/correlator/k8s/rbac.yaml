@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: incidentlens-correlator
+  namespace: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: incidentlens-correlator
+  namespace: demo-app
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: incidentlens-correlator
+  namespace: demo-app
+subjects:
+  - kind: ServiceAccount
+    name: incidentlens-correlator
+    namespace: observability
+roleRef:
+  kind: Role
+  name: incidentlens-correlator
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: incidentlens
+  namespace: observability
+  labels:
+    release: prometheus
+spec:
+  route:
+    receiver: incidentlens
+    groupBy:
+      - alertname
+      - namespace
+    groupWait: 10s
+    groupInterval: 30s
+    repeatInterval: 4h
+
+  receivers:
+    - name: incidentlens
+      webhookConfigs:
+        - url: http://incidentlens-correlator.observability.svc.cluster.local:8080/webhook/alertmanager
+          sendResolved: true

@@ -1,0 +1,104 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: incidentlens-slo-rules
+  namespace: observability
+  labels:
+    release: prometheus
+spec:
+  groups:
+    - name: incidentlens.slo
+      interval: 30s
+      rules:
+
+        # Request rate
+        - record: incidentlens:checkout_requests:rate5m
+          expr: |
+            sum(
+              rate(http_server_request_duration_count{
+                service_name="checkout"
+              }[5m])
+            )
+
+        # Error rate
+        - record: incidentlens:checkout_errors:rate5m
+          expr: |
+            sum(
+              rate(http_server_request_duration_count{
+                service_name="checkout",
+                http_response_status_code=~"5.."
+              }[5m])
+            )
+
+        # p95 latency
+        - record: incidentlens:checkout_latency:p95
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (
+                rate(http_server_request_duration_bucket{
+                  service_name="checkout"
+                }[5m])
+              )
+            )
+
+        # Availability
+        - record: incidentlens:checkout:availability5m
+          expr: |
+            1 -
+            (
+              incidentlens:checkout_errors:rate5m
+              /
+              clamp_min(incidentlens:checkout_requests:rate5m, 0.001)
+            )
+
+        # SLO: 99% availability
+        - record: incidentlens:checkout:slo_error_ratio
+          expr: |
+            1 - incidentlens:checkout:availability5m
+
+    - name: incidentlens.burnrate
+      interval: 30s
+      rules:
+
+        # Fast burn: 5-minute window
+        - alert: CheckoutAvailabilityBurnRateFast
+          expr: |
+            incidentlens:checkout:slo_error_ratio > 0.14
+          for: 2m
+          labels:
+            severity: critical
+            service: checkout
+            namespace: demo-app
+            slo: availability
+          annotations:
+            summary: "Checkout availability SLO is burning rapidly"
+            description: "Checkout error ratio exceeded the fast burn threshold."
+
+        # Slow burn: 1-hour window
+        - alert: CheckoutAvailabilityBurnRateSlow
+          expr: |
+            incidentlens:checkout:slo_error_ratio > 0.05
+          for: 10m
+          labels:
+            severity: warning
+            service: checkout
+            namespace: demo-app
+            slo: availability
+          annotations:
+            summary: "Checkout availability SLO is burning"
+            description: "Checkout error ratio exceeded the slow burn threshold."
+
+        # Latency SLO
+        - alert: CheckoutLatencySLOViolation
+          expr: |
+            incidentlens:checkout_latency:p95 > 0.300
+          for: 5m
+          labels:
+            severity: warning
+            service: checkout
+            namespace: demo-app
+            slo: latency
+          annotations:
+            summary: "Checkout p95 latency exceeds 300ms"
+            description: "Checkout p95 latency has exceeded the 300ms SLO."
