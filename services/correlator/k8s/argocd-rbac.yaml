@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: incidentlens-correlator-argocd
+  namespace: argocd
+rules:
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - applications
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: incidentlens-correlator-argocd
+  namespace: argocd
+subjects:
+  - kind: ServiceAccount
+    name: incidentlens-correlator
+    namespace: observability
+roleRef:
+  kind: Role
+  name: incidentlens-correlator-argocd
+  apiGroup: rbac.authorization.k8s.io

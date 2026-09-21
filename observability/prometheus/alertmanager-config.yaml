@@ -5,6 +5,7 @@ metadata:
   namespace: observability
   labels:
     release: prometheus
+
 spec:
   route:
     receiver: incidentlens
@@ -18,5 +19,5 @@ spec:
   receivers:
     - name: incidentlens
       webhookConfigs:
-        - url: http://incidentlens-correlator.observability.svc.cluster.local:8080/webhook/alertmanager
+        - url: http://incidentlens-correlator.observability.svc.cluster.local:8080/webhook
           sendResolved: true
