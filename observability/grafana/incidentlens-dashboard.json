@@ -1,0 +1,50 @@
+{
+  "title": "IncidentLens Incident Timeline",
+  "uid": "incidentlens-timeline",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["incidentlens"],
+  "panels": [
+    {
+      "type": "text",
+      "title": "Incident flow",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "content": "**Symptom** (burn-rate alert) → **Correlator** (`/webhook/alertmanager`) → **Evidence** (Prometheus / Tempo / Loki / K8s / GitOps) → **Ranked hypothesis + runbook** → **Human verdict** (`PATCH /incidents/{id}/verdict`)."
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Checkout error ratio (5m)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "incidentlens:checkout:slo_error_ratio",
+          "legendFormat": "error ratio"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Checkout p95 latency",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "incidentlens:checkout_latency:p95",
+          "legendFormat": "p95 seconds"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Correlator incidents (query API manually or use Infinity datasource)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "options": {
+        "showHeader": true
+      },
+      "description": "Import correlator JSON via `GET /incidents` in demo scripts; panel placeholder for timeline + hypothesis confidence in live demos."
+    }
+  ]
+}

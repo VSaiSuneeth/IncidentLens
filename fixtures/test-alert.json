@@ -1,0 +1,37 @@
+{
+  "receiver": "incidentlens",
+  "status": "firing",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "CheckoutAvailabilityBurnRateFast",
+        "severity": "critical",
+        "service": "checkout",
+        "namespace": "demo-app",
+        "slo": "availability"
+      },
+      "annotations": {
+        "summary": "Checkout availability SLO is burning rapidly",
+        "description": "Synthetic test alert for correlator webhook verification."
+      },
+      "startsAt": "2026-01-01T12:00:00.000Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": "http://prometheus.local/graph",
+      "fingerprint": "test-checkout-fast-burn"
+    }
+  ],
+  "groupLabels": {
+    "alertname": "CheckoutAvailabilityBurnRateFast",
+    "namespace": "demo-app"
+  },
+  "commonLabels": {
+    "alertname": "CheckoutAvailabilityBurnRateFast",
+    "service": "checkout",
+    "namespace": "demo-app"
+  },
+  "commonAnnotations": {},
+  "externalURL": "http://alertmanager.local",
+  "version": "4",
+  "groupKey": "demo-app:CheckoutAvailabilityBurnRateFast"
+}

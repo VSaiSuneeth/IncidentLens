@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: incidentlens-demo-app
+  namespace: observability
+  labels:
+    release: prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - demo-app
+  selector:
+    matchLabels:
+      app: checkout
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 15s

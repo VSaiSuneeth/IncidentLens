@@ -10,39 +10,43 @@ spec:
     - name: incidentlens.slo
       interval: 30s
       rules:
+        # prometheus-fastapi-instrumentator: http_requests_total{handler,method,status}
+        # status is grouped: 2xx, 3xx, 4xx, 5xx
 
-        # Request rate
         - record: incidentlens:checkout_requests:rate5m
           expr: |
             sum(
-              rate(http_server_request_duration_count{
-                service_name="checkout"
+              rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics"
               }[5m])
             )
 
-        # Error rate
         - record: incidentlens:checkout_errors:rate5m
           expr: |
             sum(
-              rate(http_server_request_duration_count{
-                service_name="checkout",
-                http_response_status_code=~"5.."
+              rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics",
+                status="5xx"
               }[5m])
             )
 
-        # p95 latency
         - record: incidentlens:checkout_latency:p95
           expr: |
             histogram_quantile(
               0.95,
               sum by (le) (
-                rate(http_server_request_duration_bucket{
-                  service_name="checkout"
+                rate(http_request_duration_seconds_bucket{
+                  namespace="demo-app",
+                  service="checkout",
+                  handler="/checkout"
                 }[5m])
               )
             )
 
-        # Availability
         - record: incidentlens:checkout:availability5m
           expr: |
             1 -
@@ -52,7 +56,6 @@ spec:
               clamp_min(incidentlens:checkout_requests:rate5m, 0.001)
             )
 
-        # SLO: 99% availability
         - record: incidentlens:checkout:slo_error_ratio
           expr: |
             1 - incidentlens:checkout:availability5m
@@ -60,11 +63,37 @@ spec:
     - name: incidentlens.burnrate
       interval: 30s
       rules:
-
-        # Fast burn: 5-minute window
         - alert: CheckoutAvailabilityBurnRateFast
           expr: |
-            incidentlens:checkout:slo_error_ratio > 0.14
+            (
+              sum(rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics",
+                status="5xx"
+              }[5m]))
+              /
+              clamp_min(sum(rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics"
+              }[5m])), 0.001)
+            ) > (14.4 * 0.01)
+            and
+            (
+              sum(rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics",
+                status="5xx"
+              }[1h]))
+              /
+              clamp_min(sum(rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics"
+              }[1h])), 0.001)
+            ) > (14.4 * 0.01)
           for: 2m
           labels:
             severity: critical
@@ -73,12 +102,39 @@ spec:
             slo: availability
           annotations:
             summary: "Checkout availability SLO is burning rapidly"
-            description: "Checkout error ratio exceeded the fast burn threshold."
+            description: "Checkout 5xx ratio exceeded the fast burn threshold (5m and 1h windows)."
 
-        # Slow burn: 1-hour window
         - alert: CheckoutAvailabilityBurnRateSlow
           expr: |
-            incidentlens:checkout:slo_error_ratio > 0.05
+            (
+              sum(rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics",
+                status="5xx"
+              }[30m]))
+              /
+              clamp_min(sum(rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics"
+              }[30m])), 0.001)
+            ) > (6 * 0.01)
+            and
+            (
+              sum(rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics",
+                status="5xx"
+              }[6h]))
+              /
+              clamp_min(sum(rate(http_requests_total{
+                namespace="demo-app",
+                service="checkout",
+                handler!="/metrics"
+              }[6h])), 0.001)
+            ) > (6 * 0.01)
           for: 10m
           labels:
             severity: warning
@@ -87,9 +143,8 @@ spec:
             slo: availability
           annotations:
             summary: "Checkout availability SLO is burning"
-            description: "Checkout error ratio exceeded the slow burn threshold."
+            description: "Checkout 5xx ratio exceeded the slow burn threshold (30m and 6h windows)."
 
-        # Latency SLO
         - alert: CheckoutLatencySLOViolation
           expr: |
             incidentlens:checkout_latency:p95 > 0.300
