@@ -1,0 +1,62 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: demo-app-checkout
+  namespace: demo-app
+  labels:
+    app: checkout
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: checkout
+  namespaceSelector:
+    matchNames:
+      - demo-app
+  endpoints:
+    - path: /metrics
+      port: http-metrics
+      interval: 30s
+      scheme: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: demo-app-payment
+  namespace: demo-app
+  labels:
+    app: payment
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: payment
+  namespaceSelector:
+    matchNames:
+      - demo-app
+  endpoints:
+    - path: /metrics
+      port: http-metrics
+      interval: 30s
+      scheme: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: demo-app-inventory
+  namespace: demo-app
+  labels:
+    app: inventory
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: inventory
+  namespaceSelector:
+    matchNames:
+      - demo-app
+  endpoints:
+    - path: /metrics
+      port: http-metrics
+      interval: 30s
+      scheme: http

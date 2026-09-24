@@ -5,7 +5,8 @@ metadata:
   namespace: demo-app
   labels:
     app: checkout
-    owner: payments-team
+    team: checkout-team
+    environment: local
     gitops: managed
 spec:
   replicas: 1
@@ -16,13 +17,21 @@ spec:
     metadata:
       labels:
         app: checkout
-        owner: payments-team
+        team: checkout-team
+        environment: local
     spec:
       containers:
         - name: checkout
           image: incidentlens/demo-app:dev
           imagePullPolicy: Never
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: checkout
+            - name: CHECKOUT_DELAY_MS
+              value: "0"
           command:
+            - python3
+            - -m
             - uvicorn
             - checkout.main:app
             - --host
@@ -31,17 +40,27 @@ spec:
             - "8000"
           ports:
             - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 2
+            timeoutSeconds: 1
+            failureThreshold: 15
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: checkout
   namespace: demo-app
+  labels:
+    app: checkout
 spec:
   selector:
     app: checkout
   ports:
-    - port: 8000
+    - name: http-metrics
+      port: 8000
       targetPort: 8000
 ---
 apiVersion: apps/v1
@@ -51,7 +70,8 @@ metadata:
   namespace: demo-app
   labels:
     app: payment
-    owner: payments-team
+    team: payment-team
+    environment: local
 spec:
   replicas: 1
   selector:
@@ -61,13 +81,21 @@ spec:
     metadata:
       labels:
         app: payment
-        owner: payments-team
+        team: payment-team
+        environment: local
     spec:
       containers:
         - name: payment
           image: incidentlens/demo-app:dev
           imagePullPolicy: Never
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: payment
+            - name: PAYMENT_DELAY_MS
+              value: "0"
           command:
+            - python3
+            - -m
             - uvicorn
             - payment.main:app
             - --host
@@ -76,17 +104,27 @@ spec:
             - "8001"
           ports:
             - containerPort: 8001
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            periodSeconds: 2
+            timeoutSeconds: 1
+            failureThreshold: 15
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: payment
   namespace: demo-app
+  labels:
+    app: payment
 spec:
   selector:
     app: payment
   ports:
-    - port: 8001
+    - name: http-metrics
+      port: 8001
       targetPort: 8001
 ---
 apiVersion: apps/v1
@@ -96,7 +134,8 @@ metadata:
   namespace: demo-app
   labels:
     app: inventory
-    owner: inventory-team
+    team: inventory-team
+    environment: local
 spec:
   replicas: 1
   selector:
@@ -106,13 +145,21 @@ spec:
     metadata:
       labels:
         app: inventory
-        owner: inventory-team
+        team: inventory-team
+        environment: local
     spec:
       containers:
         - name: inventory
           image: incidentlens/demo-app:dev
           imagePullPolicy: Never
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: inventory
+            - name: INVENTORY_DELAY_MS
+              value: "0"
           command:
+            - python3
+            - -m
             - uvicorn
             - inventory.main:app
             - --host
@@ -121,15 +168,25 @@ spec:
             - "8002"
           ports:
             - containerPort: 8002
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            periodSeconds: 2
+            timeoutSeconds: 1
+            failureThreshold: 15
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: inventory
   namespace: demo-app
+  labels:
+    app: inventory
 spec:
   selector:
     app: inventory
   ports:
-    - port: 8002
+    - name: http-metrics
+      port: 8002
       targetPort: 8002
