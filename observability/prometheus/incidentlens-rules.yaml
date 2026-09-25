@@ -43,7 +43,7 @@ spec:
                   namespace="demo-app",
                   service="checkout",
                   handler="/checkout"
-                }[5m])
+                }[1m])
               )
             )
 
