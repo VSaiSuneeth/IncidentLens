@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IncidentLens</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Operations</p>
+        <h1>IncidentLens</h1>
+      </div>
+      <div class="health" id="health-status">Checking correlator</div>
+    </header>
+    <main>
+      <section class="summary" aria-label="Incident summary">
+        <div><span>Open</span><strong id="open-count">-</strong></div>
+        <div><span>Resolved</span><strong id="resolved-count">-</strong></div>
+        <div><span>Total</span><strong id="total-count">-</strong></div>
+      </section>
+      <section class="workspace">
+        <aside class="incident-list-panel">
+          <div class="panel-heading"><h2>Incidents</h2><button id="refresh" title="Refresh incidents">Refresh</button></div>
+          <p class="state" id="list-state">Loading incidents...</p>
+          <div id="incident-list" class="incident-list" aria-live="polite"></div>
+        </aside>
+        <section class="detail-panel" aria-live="polite">
+          <p class="state" id="detail-state">Select an incident to investigate.</p>
+          <div id="incident-detail"></div>
+        </section>
+      </section>
+    </main>
+    <template id="incident-template">
+      <button class="incident-card">
+        <span class="status-dot"></span>
+        <span class="incident-card-main">
+          <strong class="alert-name"></strong>
+          <small class="incident-meta"></small>
+        </span>
+      </button>
+    </template>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

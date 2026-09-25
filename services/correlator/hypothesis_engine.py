@@ -123,6 +123,19 @@ def rank_hypotheses(
         }
     )
 
+    collected_at = evidence.get("collected_at")
+    for hypothesis in hypotheses:
+        hypothesis["incident_window_start"] = alert_starts_at
+        hypothesis["evidence_collected_at"] = collected_at
+        hypothesis["supporting_sources"] = _supporting_sources(
+            hypothesis["type"],
+            recent_deploy=recent_deploy,
+            k8s_restart_events=k8s_restart_events,
+            entry_clean=entry_clean,
+            error_rate=error_rate,
+            latency_p95=latency_p95,
+        )
+
     hypotheses.sort(key=lambda h: h.get("confidence", 0), reverse=True)
     return hypotheses
 
@@ -145,3 +158,26 @@ def _has_restart_signal(k8s: dict[str, Any]) -> bool:
         if any(token in message for token in ("crashloop", "oom", "back-off")):
             return True
     return False
+
+
+def _supporting_sources(
+    hypothesis_type: str,
+    *,
+    recent_deploy: bool,
+    k8s_restart_events: bool,
+    entry_clean: bool,
+    error_rate: float | None,
+    latency_p95: float | None,
+) -> list[str]:
+    sources = ["alertmanager"]
+    if hypothesis_type == "dependency_slowdown" and entry_clean:
+        sources.append("tempo")
+    if hypothesis_type == "bad_deployment" and recent_deploy:
+        sources.append("argocd")
+    if hypothesis_type == "pod_restart" and k8s_restart_events:
+        sources.append("kubernetes")
+    if hypothesis_type == "error_rate_spike" and error_rate is not None:
+        sources.append("prometheus")
+    if hypothesis_type == "latency_spike" and latency_p95 is not None:
+        sources.append("prometheus")
+    return sources

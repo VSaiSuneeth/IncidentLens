@@ -9,6 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py evidence.py hypothesis_engine.py ./
+COPY frontend ./frontend
 
 RUN useradd --create-home --shell /usr/sbin/nologin appuser
 USER appuser

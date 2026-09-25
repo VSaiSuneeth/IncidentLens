@@ -2,13 +2,17 @@ apiVersion: monitoring.coreos.com/v1alpha1
 kind: AlertmanagerConfig
 metadata:
   name: incidentlens
-  namespace: observability
+  namespace: demo-app
   labels:
     release: prometheus
 
 spec:
   route:
     receiver: incidentlens
+    matchers:
+      - name: namespace
+        value: demo-app
+        matchType: "="
     groupBy:
       - alertname
       - namespace

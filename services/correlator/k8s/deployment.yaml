@@ -26,6 +26,22 @@ spec:
           image: incidentlens/correlator:dev
           imagePullPolicy: Never
 
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 1000
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
           ports:
             - containerPort: 8080
 
@@ -41,6 +57,13 @@ spec:
 
             - name: DB_PATH
               value: "/data/incidents.db"
+
+            - name: WEBHOOK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: incidentlens-webhook-auth
+                  key: token
+                  optional: true
 
           volumeMounts:
             - name: data
@@ -64,6 +87,10 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: incidentlens-correlator-data
+
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
 
 ---
 apiVersion: v1
