@@ -20,6 +20,7 @@ Thumbs.db
 
 # Kubernetes local/generated files
 *.log
+prometheus-targets.json
 
 # Secrets
 *.secret
