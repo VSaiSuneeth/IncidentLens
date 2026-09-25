@@ -156,7 +156,7 @@ spec:
             - name: OTEL_SERVICE_NAME
               value: inventory
             - name: INVENTORY_DELAY_MS
-              value: "0"
+              value: "800"
           command:
             - python3
             - -m
