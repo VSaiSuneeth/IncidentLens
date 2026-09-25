@@ -19,5 +19,5 @@ spec:
   receivers:
     - name: incidentlens
       webhookConfigs:
-        - url: http://incidentlens-correlator.observability.svc.cluster.local:8080/webhook
+        - url: http://incidentlens-correlator.observability.svc.cluster.local:8080/webhook/alertmanager
           sendResolved: true

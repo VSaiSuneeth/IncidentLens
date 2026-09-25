@@ -1,8 +1,11 @@
 fastapi
 uvicorn
 httpx
+pydantic
+packaging
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-httpx
 opentelemetry-exporter-otlp
+prometheus-fastapi-instrumentator

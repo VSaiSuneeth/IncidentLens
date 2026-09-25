@@ -32,9 +32,18 @@ discovery.relabel "pod_logs" {
   }
 }
 
+loki.process "redact_sensitive" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.replace {
+    expression = "(?i)(authorization|cookie)(\"\\s*:\\s*\")[^\"]*(\")"
+    replace    = "$1[REDACTED]$2"
+  }
+}
+
 loki.source.kubernetes "pods" {
   targets    = discovery.relabel.pod_logs.output
-  forward_to = [loki.write.default.receiver]
+  forward_to = [loki.process.redact_sensitive.receiver]
 }
 
 loki.write "default" {

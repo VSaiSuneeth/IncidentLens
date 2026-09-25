@@ -1,23 +1,25 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir --target=/install -r requirements.txt packaging
+
+FROM gcr.io/distroless/python3-debian12:nonroot
 
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app:/install
 
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
-
+COPY --from=builder /install /install
 COPY checkout ./checkout
 COPY payment ./payment
 COPY inventory ./inventory
 COPY common ./common
 
-RUN useradd --create-home --shell /usr/sbin/nologin appuser
-
-USER appuser
-
 EXPOSE 8000
 
-CMD ["uvicorn", "checkout.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["python3", "-m", "uvicorn"]

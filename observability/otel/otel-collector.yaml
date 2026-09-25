@@ -25,6 +25,15 @@ data:
             - k8s.node.name
             - k8s.pod.uid
 
+      transform/redact_headers:
+        error_mode: ignore
+        trace_statements:
+          - context: span
+            statements:
+              - delete_key(attributes, "http.request.header.authorization")
+              - delete_key(attributes, "http.request.header.cookie")
+              - delete_key(attributes, "http.response.header.set-cookie")
+
       batch:
 
     exporters:
@@ -43,6 +52,7 @@ data:
             - otlp
           processors:
             - k8sattributes
+            - transform/redact_headers
             - batch
           exporters:
             - debug

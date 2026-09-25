@@ -1,28 +1,9 @@
-# from fastapi import FastAPI
-
-# app = FastAPI(title="IncidentLens Inventory Service")
-
-
-# @app.get("/inventory")
-# def inventory():
-#     return {
-#         "service": "inventory",
-#         "status": "available"
-#     }
-
-
-# @app.get("/health")
-# def health():
-#     return {
-#         "service": "inventory",
-#         "status": "healthy"
-#     }
-
-
-import logging
+import asyncio
+import os
 
 from common.logging_config import configure_logging
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -54,12 +35,17 @@ app = FastAPI(title="IncidentLens Inventory Service")
 
 # Automatically instrument incoming/outgoing HTTP routing dependencies
 FastAPIInstrumentor.instrument_app(app)
+Instrumentator().instrument(app).expose(app)
 logger = configure_logging("inventory")
+
+INVENTORY_DELAY_MS = float(os.getenv("INVENTORY_DELAY_MS", "0"))
 
 
 @app.get("/inventory")
-def inventory():
+async def inventory():
     logger.info("inventory_checked")
+    if INVENTORY_DELAY_MS > 0:
+        await asyncio.sleep(INVENTORY_DELAY_MS / 1000.0)
 
     return {
         "service": "inventory",
