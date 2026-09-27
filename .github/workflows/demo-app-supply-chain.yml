@@ -1,6 +1,7 @@
 name: demo-app-supply-chain
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "apps/demo-app/**"
