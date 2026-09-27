@@ -112,3 +112,26 @@ bash scripts/verify-e2e.sh
 See the [architecture guide](docs/architecture.md) and
 [completion report](docs/completion-report.md) for the evidence, commands, and
 remaining limitations.
+
+## Screenshots
+
+### Architecture
+![IncidentLens Architecture](docs/screenshots/architecture.png)
+
+### Incident Console
+![IncidentLens Incident Console](docs/screenshots/incident-console.png)
+
+### Prometheus Alert — SLO
+![Prometheus Alert](docs/screenshots/prometheus-alert.png)
+
+### Prometheus Alert — Firing State
+![Prometheus Alert Firing State](docs/screenshots/prometheus-alert%282%29.png)
+
+### Kubernetes
+![Kubernetes](docs/screenshots/kubernetes.png)
+
+### Argo CD
+![Argo CD](docs/screenshots/argocd.png)
+
+### GitHub Actions
+![GitHub Actions](docs/screenshots/github-actions.png)
