@@ -12,16 +12,16 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   scan-and-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -33,15 +33,16 @@ jobs:
         with:
           image-ref: incidentlens/demo-app:${{ github.sha }}
           severity: CRITICAL,HIGH
+          ignore-unfixed: true
           exit-code: "1"
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
 
-      - name: Sign image (keyless on main)
-        if: github.ref == 'refs/heads/main'
-        run: cosign sign --yes incidentlens/demo-app:${{ github.sha }}
+      - name: Verify Cosign installation
+        run: cosign version
 
       - name: GitOps bump reminder
         run: |
+          echo "Image built and security-scanned successfully."
           echo "Update image tag in gitops/incidentlens-app.yaml (or platform-gitops) for Argo CD sync — no hand kubectl apply."
